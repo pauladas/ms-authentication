@@ -1,9 +1,14 @@
 package br.com.devjansen.exception;
 
+import lombok.NoArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@NoArgsConstructor
 public class NotFoundException extends RestException {
 
-    public NotFoundException() {
-        super("");
-    }
+	@Override
+	public HttpStatus getStatus() {
+		return HttpStatus.NOT_FOUND;
+	}
 
 }

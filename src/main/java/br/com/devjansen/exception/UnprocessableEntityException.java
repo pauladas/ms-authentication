@@ -1,22 +1,35 @@
 package br.com.devjansen.exception;
 
 import br.com.devjansen.entity.dto.response.ErrorResponse;
-import lombok.Getter;
+import org.springframework.http.HttpStatus;
 
-@Getter
 public class UnprocessableEntityException extends RestException {
 
-    private ErrorResponse responseBody;
+	private String responseBodyCode;
 
-    public UnprocessableEntityException(String code) {
-        super(code);
-        this.responseBody = ErrorResponse.builder()
-                .code(code)
-                .build();
-    }
+	private ErrorResponse responseBody;
 
-    public UnprocessableEntityException(ErrorResponse errorResponse) {
-        super(errorResponse.getMessage());
-        this.responseBody = errorResponse;
-    }
+	public UnprocessableEntityException(String responseBodyCode) {
+		this.responseBodyCode = responseBodyCode;
+	}
+
+	public UnprocessableEntityException(ErrorResponse responseBody) {
+		this.responseBody = responseBody;
+	}
+
+	@Override
+	public HttpStatus getStatus() {
+		return HttpStatus.UNPROCESSABLE_ENTITY;
+	}
+
+	@Override
+	public String getResponseBodyCode() {
+		return this.responseBodyCode;
+	}
+
+	@Override
+	public ErrorResponse getResponseBody() {
+		return this.responseBody;
+	}
+
 }
