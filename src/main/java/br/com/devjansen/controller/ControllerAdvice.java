@@ -1,6 +1,8 @@
 package br.com.devjansen.controller;
 
 import br.com.devjansen.entity.dto.response.ErrorResponse;
+import br.com.devjansen.exception.NotFoundException;
+import br.com.devjansen.exception.RestException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -26,59 +29,83 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ControllerAdvice {
 
-	private final MessageSource messageSource;
+    private final MessageSource messageSource;
 
-	@ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-	public void handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public void handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
 
-	}
+    }
 
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
-	public List<ErrorResponse> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
-		return Collections.singletonList(ErrorResponse
-												 .builder()
-												 .code("400.001")
-												 .message(getMessage("400.001", e.getName()))
-												 .build());
-	}
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public List<ErrorResponse> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        return Collections.singletonList(ErrorResponse
+                .builder()
+                .code("400.001")
+                .message(getMessage("400.001", e.getName()))
+                .build());
+    }
 
-	@ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-	@ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-	public void handleHttpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e) {
+    @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public void handleHttpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e) {
 
-	}
+    }
 
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	@ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class})
-	public List<ErrorResponse> handleMessageNotReadableAndMissingServletException(Exception e) {
-		ErrorResponse errorResponse;
-		if (e.getCause() instanceof JsonMappingException jsonMappingException) {
-			String field = jsonMappingException
-					.getPath()
-					.stream()
-					.map(JsonMappingException.Reference::getFieldName)
-					.filter(StringUtils::isNotBlank)
-					.collect(Collectors.joining("."));
-			errorResponse = ErrorResponse
-					.builder()
-					.code("400.001")
-					.message(getMessage("400.001", field))
-					.build();
-		} else {
-			errorResponse = ErrorResponse
-					.builder()
-					.code("400.000")
-					.message(getMessage("400.000"))
-					.build();
-		}
-		return Collections.singletonList(errorResponse);
-	}
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class})
+    public List<ErrorResponse> handleMessageNotReadableAndMissingServletException(Exception e) {
+        ErrorResponse errorResponse;
+        if (e.getCause() instanceof JsonMappingException jsonMappingException) {
+            String field = jsonMappingException
+                    .getPath()
+                    .stream()
+                    .map(JsonMappingException.Reference::getFieldName)
+                    .filter(StringUtils::isNotBlank)
+                    .collect(Collectors.joining("."));
+            errorResponse = ErrorResponse
+                    .builder()
+                    .code("400.001")
+                    .message(getMessage("400.001", field))
+                    .build();
+        } else {
+            errorResponse = ErrorResponse
+                    .builder()
+                    .code("400.000")
+                    .message(getMessage("400.000"))
+                    .build();
+        }
+        return Collections.singletonList(errorResponse);
+    }
 
-	private String getMessage(String code,
-							  Object... args) {
-		return this.messageSource.getMessage(code, args, LocaleContextHolder.getLocale());
-	}
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler({NotFoundException.class})
+    public void handleNotFoundException(NotFoundException e) {
+
+    }
+
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    @ExceptionHandler({RestException.class})
+    public ErrorResponse handleRestException(RestException e) {
+        return Optional.ofNullable(e.getResponseBody())
+                .map(exceptionResponse ->
+                        ErrorResponse.builder()
+                                .code(exceptionResponse.getCode())
+                                .message(Optional.ofNullable(exceptionResponse.getMessage())
+                                        .orElse(getMessage(exceptionResponse.getCode())))
+                                .build()
+                )
+                .orElse(ErrorResponse.builder()
+                        .code(e.getResponseBodyCode())
+                        .message(getMessage(e.getResponseBodyCode()))
+                        .build());
+
+    }
+
+    private String getMessage(String code,
+                              Object... args) {
+        return this.messageSource.getMessage(code, args, LocaleContextHolder.getLocale());
+    }
 
 }
