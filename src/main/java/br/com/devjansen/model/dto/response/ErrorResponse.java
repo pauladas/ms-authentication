@@ -1,4 +1,4 @@
-package br.com.devjansen.entity.dto.response;
+package br.com.devjansen.model.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
